@@ -1,18 +1,25 @@
-import { Head, Link, router } from '@inertiajs/react';
-import { ChevronDown, MapPin, Search } from 'lucide-react';
+import { Form, Head, Link, router } from '@inertiajs/react';
+import { ChevronDown, MapPin, Search, Star, StarOff, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import {
+    destroy,
+    store,
+} from '@/actions/App/Http/Controllers/SavedLocationController';
 import AlertError from '@/components/alert-error';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 import { weather } from '@/routes';
 import type {
     City,
     ForecastDay,
     ForecastUnits,
     HourlyForecast,
+    SavedLocation,
     WeatherLocation,
 } from '@/types';
 
@@ -34,7 +41,9 @@ function formatValue(value: number | null, unit: string): string {
     return value === null ? '—' : `${numberFormatter.format(value)} ${unit}`;
 }
 
-function describeLocation(location: Omit<WeatherLocation, 'id'>): string {
+function describeLocation(
+    location: Pick<WeatherLocation, 'department' | 'region' | 'country'>,
+): string {
     return [location.department, location.region, location.country]
         .filter(Boolean)
         .join(', ');
@@ -147,6 +156,116 @@ function CitySearch({
                 </ul>
             )}
         </div>
+    );
+}
+
+function SavedLocationList({
+    savedLocations,
+    currentCityId,
+}: {
+    savedLocations: SavedLocation[];
+    currentCityId: number | null;
+}) {
+    return (
+        <section className="grid gap-2">
+            <h3 className="text-sm font-medium">Mes localisations</h3>
+
+            {savedLocations.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                    Aucune localisation enregistrée. Recherchez une ville puis
+                    cliquez sur « Enregistrer cette ville ».
+                </p>
+            ) : (
+                <ul className="flex flex-wrap gap-2">
+                    {savedLocations.map((savedLocation) => (
+                        <li
+                            key={savedLocation.id}
+                            className={cn(
+                                'flex items-center rounded-full border text-sm',
+                                savedLocation.cityId === currentCityId &&
+                                    'border-primary bg-accent',
+                            )}
+                        >
+                            <Link
+                                href={weather({
+                                    query: { city: savedLocation.cityId },
+                                })}
+                                title={describeLocation(savedLocation)}
+                                className="flex items-center gap-1.5 py-1 pr-1 pl-3"
+                            >
+                                <MapPin className="size-3.5 text-muted-foreground" />
+                                {savedLocation.name}
+                            </Link>
+                            <Form
+                                {...destroy.form(savedLocation.id)}
+                                options={{ preserveScroll: true }}
+                            >
+                                {({ processing }) => (
+                                    <button
+                                        type="submit"
+                                        disabled={processing}
+                                        aria-label={`Retirer ${savedLocation.name} de mes localisations`}
+                                        className="mr-1 rounded-full p-1 text-muted-foreground hover:bg-background hover:text-foreground disabled:opacity-50"
+                                    >
+                                        <X className="size-3.5" />
+                                    </button>
+                                )}
+                            </Form>
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </section>
+    );
+}
+
+function SaveLocationButton({
+    cityId,
+    savedLocation,
+    error,
+}: {
+    cityId: number;
+    savedLocation: SavedLocation | undefined;
+    error?: string;
+}) {
+    if (savedLocation) {
+        return (
+            <Form
+                {...destroy.form(savedLocation.id)}
+                options={{ preserveScroll: true }}
+            >
+                {({ processing }) => (
+                    <Button
+                        type="submit"
+                        variant="outline"
+                        size="sm"
+                        disabled={processing}
+                    >
+                        <StarOff />
+                        Retirer de mes localisations
+                    </Button>
+                )}
+            </Form>
+        );
+    }
+
+    return (
+        <Form
+            {...store.form()}
+            options={{ preserveScroll: true }}
+            className="grid justify-items-start gap-1"
+        >
+            {({ processing }) => (
+                <>
+                    <input type="hidden" name="city_id" value={cityId} />
+                    <Button type="submit" size="sm" disabled={processing}>
+                        <Star />
+                        Enregistrer cette ville
+                    </Button>
+                    <InputError message={error} />
+                </>
+            )}
+        </Form>
     );
 }
 
@@ -272,14 +391,21 @@ export default function Weather({
     forecast,
     search,
     cities,
+    savedLocations,
     errors,
 }: {
     location: WeatherLocation | null;
     forecast: HourlyForecast | null;
     search: string | null;
     cities: City[] | null;
-    errors: Partial<Record<'search' | 'city', string>>;
+    savedLocations: SavedLocation[];
+    errors: Partial<Record<'search' | 'city' | 'city_id', string>>;
 }) {
+    const currentCityId = location?.id ?? null;
+    const currentSavedLocation = savedLocations.find(
+        (savedLocation) => savedLocation.cityId === currentCityId,
+    );
+
     const place =
         location === null
             ? null
@@ -297,16 +423,30 @@ export default function Weather({
                     error={errors.search ?? errors.city}
                 />
 
+                <SavedLocationList
+                    savedLocations={savedLocations}
+                    currentCityId={currentCityId}
+                />
+
                 {place !== null && location !== null && (
-                    <Heading
-                        title={`Météo à ${place}`}
-                        description={[
-                            describeLocation(location),
-                            'Prévisions heure par heure — modèle Météo-France',
-                        ]
-                            .filter(Boolean)
-                            .join(' · ')}
-                    />
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                        <Heading
+                            title={`Météo à ${place}`}
+                            description={[
+                                describeLocation(location),
+                                'Prévisions heure par heure — modèle Météo-France',
+                            ]
+                                .filter(Boolean)
+                                .join(' · ')}
+                        />
+                        {currentCityId !== null && (
+                            <SaveLocationButton
+                                cityId={currentCityId}
+                                savedLocation={currentSavedLocation}
+                                error={errors.city_id}
+                            />
+                        )}
+                    </div>
                 )}
 
                 {forecast === null ? (

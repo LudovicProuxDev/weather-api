@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\Weather\FetchHourlyForecast;
 use App\Actions\Weather\GeocodeCities;
 use App\Http\Requests\ShowWeatherForecastRequest;
+use App\Models\SavedLocation;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Validation\ValidationException;
@@ -32,6 +33,18 @@ class WeatherForecastController extends Controller
             'forecast' => fn (): ?array => $loadWeather()['forecast'],
             'search' => $request->search(),
             'cities' => fn (): ?array => $this->searchCities($request->search(), $geocodeCities),
+            'savedLocations' => fn (): array => $request->user()->savedLocations()
+                ->orderBy('name')
+                ->get()
+                ->map(fn (SavedLocation $savedLocation): array => [
+                    'id' => $savedLocation->id,
+                    'cityId' => $savedLocation->city_id,
+                    'name' => $savedLocation->name,
+                    'region' => $savedLocation->region,
+                    'department' => $savedLocation->department,
+                    'country' => $savedLocation->country,
+                ])
+                ->all(),
         ]);
     }
 
@@ -59,7 +72,7 @@ class WeatherForecastController extends Controller
     }
 
     /**
-     * Resolve the location from the selected city, explicit coordinates, or the default city.
+     * Resolve the location from the selected city, explicit coordinates, the user's first saved location, or the default city.
      *
      * @return array{id: int|null, name: string|null, region: string|null, department: string|null, country: string|null, latitude: float, longitude: float}
      *
@@ -72,6 +85,12 @@ class WeatherForecastController extends Controller
         $cityId = $request->cityId();
 
         if ($cityId !== null) {
+            $savedLocation = $request->user()->savedLocations()->where('city_id', $cityId)->first();
+
+            if ($savedLocation !== null) {
+                return $this->toLocation($savedLocation);
+            }
+
             return $geocodeCities->find($cityId)
                 ?? throw ValidationException::withMessages(['city' => 'Cette ville est introuvable.']);
         }
@@ -88,7 +107,31 @@ class WeatherForecastController extends Controller
             ];
         }
 
+        $firstSavedLocation = $request->user()->savedLocations()->orderBy('name')->first();
+
+        if ($firstSavedLocation !== null) {
+            return $this->toLocation($firstSavedLocation);
+        }
+
         return config('services.open_meteo.default_location');
+    }
+
+    /**
+     * Convert a saved location to the location shape used by the page.
+     *
+     * @return array{id: int, name: string, region: string|null, department: string|null, country: string|null, latitude: float, longitude: float}
+     */
+    protected function toLocation(SavedLocation $savedLocation): array
+    {
+        return [
+            'id' => $savedLocation->city_id,
+            'name' => $savedLocation->name,
+            'region' => $savedLocation->region,
+            'department' => $savedLocation->department,
+            'country' => $savedLocation->country,
+            'latitude' => $savedLocation->latitude,
+            'longitude' => $savedLocation->longitude,
+        ];
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\SavedLocation;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
@@ -287,6 +288,74 @@ class WeatherForecastTest extends TestCase
         $response->assertSessionHasErrors(['city' => 'Cette ville est introuvable.']);
 
         Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), '/v1/forecast'));
+    }
+
+    public function test_lists_only_the_users_saved_locations_by_name(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake(['api.open-meteo.com/v1/forecast*' => Http::response($this->openMeteoPayload())]);
+        $user = User::factory()->create();
+        $nantes = SavedLocation::factory()->for($user)->create(['city_id' => 2990969, 'name' => 'Nantes']);
+        $brest = SavedLocation::factory()->for($user)->create(['city_id' => 3030300, 'name' => 'Brest']);
+        SavedLocation::factory()->create(['name' => 'Lyon']);
+
+        $response = $this->actingAs($user)->get(route('weather'));
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->has('savedLocations', 2)
+            ->where('savedLocations.0', [
+                'id' => $brest->id,
+                'cityId' => 3030300,
+                'name' => 'Brest',
+                'region' => $brest->region,
+                'department' => $brest->department,
+                'country' => 'France',
+            ])
+            ->where('savedLocations.1.id', $nantes->id)
+        );
+    }
+
+    public function test_shows_the_first_saved_location_by_default(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake(['api.open-meteo.com/v1/forecast*' => Http::response($this->openMeteoPayload())]);
+        $user = User::factory()->create();
+        SavedLocation::factory()->for($user)->create(['city_id' => 2990969, 'name' => 'Nantes', 'latitude' => 47.21725, 'longitude' => -1.55336]);
+        SavedLocation::factory()->for($user)->create(['city_id' => 3030300, 'name' => 'Brest', 'latitude' => 48.39029, 'longitude' => -4.48628]);
+
+        $response = $this->actingAs($user)->get(route('weather'));
+
+        $response->assertInertia(fn (Assert $page) => $page
+            ->where('location.id', 3030300)
+            ->where('location.name', 'Brest')
+        );
+
+        Http::assertSent(fn (Request $request): bool => $request['latitude'] == 48.39029
+            && $request['longitude'] == -4.48628);
+    }
+
+    public function test_uses_the_stored_details_of_a_saved_city_without_geocoding_it(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake(['api.open-meteo.com/v1/forecast*' => Http::response($this->openMeteoPayload())]);
+        $user = User::factory()->create();
+        SavedLocation::factory()->for($user)->create([
+            'city_id' => 2995469,
+            'name' => 'Marseille',
+            'region' => "Région Provence-Alpes-Côte d'Azur",
+            'department' => 'Bouches-du-Rhône',
+            'country' => 'France',
+            'latitude' => 43.29695,
+            'longitude' => 5.38107,
+        ]);
+
+        $response = $this->actingAs($user)->get(route('weather', ['city' => 2995469]));
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page->where('location', $this->marseilleCity()));
+
+        Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), 'geocoding-api'));
     }
 
     public function test_caches_the_forecast_between_requests_for_the_same_coordinates(): void
