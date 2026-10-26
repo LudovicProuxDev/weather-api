@@ -35,4 +35,22 @@ return [
         ],
     ],
 
+    'open_meteo' => [
+        'base_url' => env('OPEN_METEO_BASE_URL', 'https://api.open-meteo.com/v1'),
+        'model' => env('OPEN_METEO_MODEL', 'meteofrance_seamless'),
+        'forecast_days' => (int) env('OPEN_METEO_FORECAST_DAYS', 4),
+        'cache_ttl' => (int) env('OPEN_METEO_CACHE_TTL', 1800),
+        'geocoding_url' => env('OPEN_METEO_GEOCODING_URL', 'https://geocoding-api.open-meteo.com/v1'),
+        'geocoding_cache_ttl' => (int) env('OPEN_METEO_GEOCODING_CACHE_TTL', 86400),
+        'default_location' => [
+            'id' => 3006787,
+            'name' => 'La Rochelle',
+            'region' => 'Nouvelle-Aquitaine',
+            'department' => 'Charente-Maritime',
+            'country' => 'France',
+            'latitude' => 46.1631,
+            'longitude' => -1.1522,
+        ],
+    ],
+
 ];

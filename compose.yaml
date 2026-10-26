@@ -1,48 +1,49 @@
 name: weather-api
 
 x-environment: &environment
-  APP_NAME: ${APP_NAME:-Laravel}
-  APP_KEY: ${APP_KEY:?APP_KEY must be set in .env (php artisan key:generate)}
-  APP_URL: http://localhost:${APP_PORT:-8080}
-  SESSION_DRIVER: database
-  CACHE_STORE: database
-  QUEUE_CONNECTION: database
-  MAIL_MAILER: log
+    APP_NAME: ${APP_NAME:-Laravel}
+    APP_KEY: ${APP_KEY:?APP_KEY must be set in .env (php artisan key:generate)}
+    APP_URL: http://localhost:${APP_PORT:-8080}
+    SESSION_DRIVER: database
+    CACHE_STORE: database
+    QUEUE_CONNECTION: database
+    MAIL_MAILER: log
 
 x-app: &app
-  image: weather-api:latest
-  restart: unless-stopped
-  environment: *environment
-  volumes:
-    - storage:/app/storage
+    image: weather-api:latest
+    restart: unless-stopped
+    environment: *environment
+    volumes:
+        - storage:/app/storage
 
 x-worker: &worker
-  <<: *app
-  environment:
-    <<: *environment
-    RUN_MIGRATIONS: "false"
-  healthcheck:
-    disable: true
-  depends_on:
-    app:
-      condition: service_healthy
+    <<: *app
+    environment:
+        <<: *environment
+        RUN_MIGRATIONS: 'false'
+    healthcheck:
+        disable: true
+    depends_on:
+        app:
+            condition: service_healthy
 
 services:
-  app:
-    <<: *app
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "${APP_PORT:-8080}:8080"
+    app:
+        <<: *app
+        build:
+            context: .
+            dockerfile: Dockerfile
+        ports:
+            - '${APP_PORT:-8080}:8080'
 
-  queue:
-    <<: *worker
-    command: ["php", "artisan", "queue:work", "--tries=3", "--max-time=3600"]
+    queue:
+        <<: *worker
+        command:
+            ['php', 'artisan', 'queue:work', '--tries=3', '--max-time=3600']
 
-  scheduler:
-    <<: *worker
-    command: ["php", "artisan", "schedule:work"]
+    scheduler:
+        <<: *worker
+        command: ['php', 'artisan', 'schedule:work']
 
 volumes:
-  storage:
+    storage:
