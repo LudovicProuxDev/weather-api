@@ -1,7 +1,7 @@
 name: weather-api
 
 x-environment: &environment
-    APP_NAME: ${APP_NAME:-Laravel}
+    APP_NAME: ${APP_NAME:-Weather API}
     APP_KEY: ${APP_KEY:?APP_KEY must be set in .env (php artisan key:generate)}
     APP_URL: http://localhost:${APP_PORT:-8080}
     DB_CONNECTION: pgsql

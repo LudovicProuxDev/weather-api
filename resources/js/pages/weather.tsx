@@ -1,12 +1,22 @@
 import { Form, Head, Link, router } from '@inertiajs/react';
-import { ChevronDown, MapPin, Search, Star, StarOff, X } from 'lucide-react';
+import {
+    ChevronDown,
+    Droplets,
+    MapPin,
+    Search,
+    Snowflake,
+    Star,
+    StarOff,
+    Thermometer,
+    X,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
     destroy,
     store,
 } from '@/actions/App/Http/Controllers/SavedLocationController';
 import AlertError from '@/components/alert-error';
-import Heading from '@/components/heading';
+import AppLogoIcon from '@/components/app-logo-icon';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -39,6 +49,26 @@ function formatDay(date: string): string {
 
 function formatValue(value: number | null, unit: string): string {
     return value === null ? '—' : `${numberFormatter.format(value)} ${unit}`;
+}
+
+function temperatureClass(temperature: number): string {
+    if (temperature <= 0) {
+        return 'text-sky-600 dark:text-sky-300';
+    }
+
+    if (temperature < 10) {
+        return 'text-cyan-600 dark:text-cyan-300';
+    }
+
+    if (temperature < 20) {
+        return 'text-emerald-600 dark:text-emerald-400';
+    }
+
+    if (temperature < 28) {
+        return 'text-orange-500 dark:text-orange-400';
+    }
+
+    return 'text-red-600 dark:text-red-400';
 }
 
 function describeLocation(
@@ -279,23 +309,47 @@ function ForecastDayCard({
     defaultOpen: boolean;
 }) {
     return (
-        <Card className="gap-0 py-0">
+        <Card className="weather-card gap-0 py-0">
             <details open={defaultOpen} className="group">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-4 [&::-webkit-details-marker]:hidden">
                     <div className="space-y-1">
                         <div className="font-semibold capitalize">
                             {formatDay(day.date)}
                         </div>
-                        <div className="text-sm text-muted-foreground">
-                            Min {formatValue(day.min, units.temperature)} · Max{' '}
-                            {formatValue(day.max, units.temperature)} ·
-                            Précipitations{' '}
-                            {formatValue(
-                                day.precipitation,
-                                units.precipitation,
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                                <Thermometer className="size-3.5" />
+                                <span
+                                    className={cn(
+                                        'font-medium',
+                                        temperatureClass(day.min),
+                                    )}
+                                >
+                                    {formatValue(day.min, units.temperature)}
+                                </span>
+                                /
+                                <span
+                                    className={cn(
+                                        'font-medium',
+                                        temperatureClass(day.max),
+                                    )}
+                                >
+                                    {formatValue(day.max, units.temperature)}
+                                </span>
+                            </span>
+                            <span className="flex items-center gap-1">
+                                <Droplets className="size-3.5 text-sky-500" />
+                                {formatValue(
+                                    day.precipitation,
+                                    units.precipitation,
+                                )}
+                            </span>
+                            {day.snowfall > 0 && (
+                                <span className="flex items-center gap-1">
+                                    <Snowflake className="size-3.5 text-sky-400" />
+                                    {formatValue(day.snowfall, units.snowfall)}
+                                </span>
                             )}
-                            {day.snowfall > 0 &&
-                                ` · Neige ${formatValue(day.snowfall, units.snowfall)}`}
                         </div>
                     </div>
                     <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
@@ -334,7 +388,12 @@ function ForecastDayCard({
                                     <td className="py-1.5 pr-4 text-muted-foreground">
                                         {hour.time}
                                     </td>
-                                    <td className="py-1.5 pr-4 font-medium">
+                                    <td
+                                        className={cn(
+                                            'py-1.5 pr-4 font-medium',
+                                            temperatureClass(hour.temperature),
+                                        )}
+                                    >
                                         {formatValue(
                                             hour.temperature,
                                             units.temperature,
@@ -429,16 +488,23 @@ export default function Weather({
                 />
 
                 {place !== null && location !== null && (
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                        <Heading
-                            title={`Météo à ${place}`}
-                            description={[
-                                describeLocation(location),
-                                'Prévisions heure par heure — modèle Météo-France',
-                            ]
-                                .filter(Boolean)
-                                .join(' · ')}
-                        />
+                    <section className="weather-hero flex flex-wrap items-center justify-between gap-4 rounded-xl border p-5">
+                        <div className="flex items-center gap-4">
+                            <AppLogoIcon className="sun-spin size-10 shrink-0 text-amber-500" />
+                            <div className="space-y-0.5">
+                                <h2 className="text-xl font-semibold tracking-tight">
+                                    Météo à {place}
+                                </h2>
+                                <p className="text-sm text-muted-foreground">
+                                    {[
+                                        describeLocation(location),
+                                        'Prévisions heure par heure — modèle Météo-France',
+                                    ]
+                                        .filter(Boolean)
+                                        .join(' · ')}
+                                </p>
+                            </div>
+                        </div>
                         {currentCityId !== null && (
                             <SaveLocationButton
                                 cityId={currentCityId}
@@ -446,7 +512,7 @@ export default function Weather({
                                 error={errors.city_id}
                             />
                         )}
-                    </div>
+                    </section>
                 )}
 
                 {forecast === null ? (
