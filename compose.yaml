@@ -63,9 +63,15 @@ services:
             POSTGRES_DB: ${DB_DATABASE:-weather_api}
             POSTGRES_USER: ${DB_USERNAME:-weather_api}
             POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env}
-        # Bound to localhost only so `composer run dev` can reach it without exposing it on the network.
+        # Bound to localhost only, for database tools; never exposed on the network.
         ports:
             - '127.0.0.1:${DB_FORWARD_PORT:-5432}:5432'
+        # Fixed address so `composer run dev` on a Linux/WSL host can connect directly
+        # (DB_HOST=172.30.0.10) instead of going through Docker's port proxy, which
+        # drops connections intermittently under WSL.
+        networks:
+            default:
+                ipv4_address: 172.30.0.10
         volumes:
             - postgres:/var/lib/postgresql
             - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -78,6 +84,12 @@ services:
             interval: 5s
             timeout: 5s
             retries: 10
+
+networks:
+    default:
+        ipam:
+            config:
+                - subnet: 172.30.0.0/24
 
 volumes:
     storage:
