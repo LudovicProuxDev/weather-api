@@ -46,3 +46,12 @@ export type HourlyForecast = {
     units: ForecastUnits;
     days: ForecastDay[];
 };
+
+export type SavedLocation = {
+    id: number;
+    cityId: number;
+    name: string;
+    region: string | null;
+    department: string | null;
+    country: string | null;
+};

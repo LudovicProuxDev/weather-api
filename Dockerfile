@@ -7,7 +7,7 @@ ARG PHP_VERSION=8.5
 # ---------------------------------------------------------------------------
 FROM dunglas/frankenphp:1-php${PHP_VERSION}-alpine AS base
 
-RUN install-php-extensions bcmath intl opcache pcntl zip
+RUN install-php-extensions bcmath intl opcache pcntl pdo_pgsql zip
 
 WORKDIR /app
 
@@ -47,8 +47,7 @@ FROM base AS production
 ENV APP_ENV=production \
     APP_DEBUG=false \
     LOG_CHANNEL=stderr \
-    DB_CONNECTION=sqlite \
-    DB_DATABASE=/app/storage/database/database.sqlite \
+    DB_CONNECTION=pgsql \
     SERVER_NAME=:8080
 
 RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
@@ -66,7 +65,7 @@ COPY --from=assets --chown=laravel:laravel /app/public/build /app/public/build
 COPY --chmod=755 docker/entrypoint.sh /usr/local/bin/entrypoint
 
 RUN rm -f public/hot \
-    && mkdir -p storage/database storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
+    && mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
     && chown -R laravel:laravel storage bootstrap/cache /data/caddy /config/caddy
 
 USER laravel
