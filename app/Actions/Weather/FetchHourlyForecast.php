@@ -8,12 +8,67 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
+/**
+ * @phpstan-type OpenMeteoPayload array{
+ *     timezone: string,
+ *     hourly_units: array<string, string>,
+ *     hourly: array{
+ *         time: list<string>,
+ *         temperature_2m: list<float|null>,
+ *         apparent_temperature: list<float|null>,
+ *         relative_humidity_2m: list<int|null>,
+ *         dew_point_2m: list<float|null>,
+ *         precipitation: list<float|null>,
+ *         rain: list<float|null>,
+ *         snowfall: list<float|null>,
+ *     },
+ * }
+ * @phpstan-type ForecastHour array{
+ *     time: string,
+ *     temperature: float,
+ *     apparentTemperature: float|null,
+ *     humidity: int|null,
+ *     dewPoint: float|null,
+ *     precipitation: float|null,
+ *     rain: float|null,
+ *     snowfall: float|null,
+ * }
+ * @phpstan-type ForecastDay array{
+ *     date: string,
+ *     min: float,
+ *     max: float,
+ *     precipitation: float,
+ *     rain: float,
+ *     snowfall: float,
+ *     hours: list<ForecastHour>,
+ * }
+ * @phpstan-type Forecast array{
+ *     timezone: string,
+ *     units: array{temperature: string, humidity: string, precipitation: string, snowfall: string},
+ *     days: list<ForecastDay>,
+ * }
+ */
 class FetchHourlyForecast
 {
     /**
-     * Fetch the hourly temperature forecast from Open-Meteo, grouped by day.
+     * The hourly variables requested from Open-Meteo.
      *
-     * @return array{timezone: string, unit: string, days: list<array{date: string, min: float, max: float, hours: list<array{time: string, temperature: float}>}>}
+     * @var list<string>
+     */
+    protected array $hourlyVariables = [
+        'temperature_2m',
+        'precipitation',
+        'relative_humidity_2m',
+        'dew_point_2m',
+        'apparent_temperature',
+        'rain',
+        'snowfall',
+    ];
+
+    /**
+     * Fetch the hourly forecast from Open-Meteo, grouped by local day.
+     *
+     * @return Forecast
      *
      * @throws ConnectionException
      * @throws RequestException
@@ -23,9 +78,10 @@ class FetchHourlyForecast
         $config = config('services.open_meteo');
 
         $cacheKey = sprintf(
-            'open-meteo:%s:%d:%.4f:%.4f',
+            'open-meteo:%s:%d:%s:%.4f:%.4f',
             $config['model'],
             $config['forecast_days'],
+            implode(',', $this->hourlyVariables),
             $latitude,
             $longitude,
         );
@@ -41,7 +97,7 @@ class FetchHourlyForecast
      * Call the Open-Meteo forecast endpoint.
      *
      * @param  array{base_url: string, model: string, forecast_days: int}  $config
-     * @return array{timezone: string, hourly_units: array<string, string>, hourly: array{time: list<string>, temperature_2m: list<float|null>}}
+     * @return OpenMeteoPayload
      *
      * @throws ConnectionException
      * @throws RequestException
@@ -57,7 +113,7 @@ class FetchHourlyForecast
             ->get('forecast', [
                 'latitude' => $latitude,
                 'longitude' => $longitude,
-                'hourly' => 'temperature_2m',
+                'hourly' => implode(',', $this->hourlyVariables),
                 'models' => $config['model'],
                 'forecast_days' => $config['forecast_days'],
                 'timezone' => 'auto',
@@ -67,18 +123,18 @@ class FetchHourlyForecast
     }
 
     /**
-     * Group the hourly temperatures by local day, skipping hours without data.
+     * Group the hourly values by local day, skipping hours without a temperature.
      *
-     * @param  array{timezone: string, hourly_units: array<string, string>, hourly: array{time: list<string>, temperature_2m: list<float|null>}}  $payload
-     * @return array{timezone: string, unit: string, days: list<array{date: string, min: float, max: float, hours: list<array{time: string, temperature: float}>}>}
+     * @param  OpenMeteoPayload  $payload
+     * @return Forecast
      */
     protected function groupByDay(array $payload): array
     {
-        $temperatures = $payload['hourly']['temperature_2m'];
+        $hourly = $payload['hourly'];
         $hoursByDate = [];
 
-        foreach ($payload['hourly']['time'] as $index => $time) {
-            $temperature = $temperatures[$index] ?? null;
+        foreach ($hourly['time'] as $index => $time) {
+            $temperature = $hourly['temperature_2m'][$index] ?? null;
 
             if ($temperature === null) {
                 continue;
@@ -87,26 +143,50 @@ class FetchHourlyForecast
             $hoursByDate[substr($time, 0, 10)][] = [
                 'time' => substr($time, 11, 5),
                 'temperature' => (float) $temperature,
+                'apparentTemperature' => $this->toFloat($hourly['apparent_temperature'][$index] ?? null),
+                'humidity' => $hourly['relative_humidity_2m'][$index] ?? null,
+                'dewPoint' => $this->toFloat($hourly['dew_point_2m'][$index] ?? null),
+                'precipitation' => $this->toFloat($hourly['precipitation'][$index] ?? null),
+                'rain' => $this->toFloat($hourly['rain'][$index] ?? null),
+                'snowfall' => $this->toFloat($hourly['snowfall'][$index] ?? null),
             ];
         }
 
         $days = [];
 
         foreach ($hoursByDate as $date => $hours) {
-            $dayTemperatures = array_column($hours, 'temperature');
+            $temperatures = array_column($hours, 'temperature');
 
             $days[] = [
                 'date' => (string) $date,
-                'min' => min($dayTemperatures),
-                'max' => max($dayTemperatures),
+                'min' => min($temperatures),
+                'max' => max($temperatures),
+                'precipitation' => round(array_sum(array_column($hours, 'precipitation')), 1),
+                'rain' => round(array_sum(array_column($hours, 'rain')), 1),
+                'snowfall' => round(array_sum(array_column($hours, 'snowfall')), 1),
                 'hours' => $hours,
             ];
         }
 
+        $units = $payload['hourly_units'];
+
         return [
             'timezone' => $payload['timezone'],
-            'unit' => $payload['hourly_units']['temperature_2m'] ?? '°C',
+            'units' => [
+                'temperature' => $units['temperature_2m'] ?? '°C',
+                'humidity' => $units['relative_humidity_2m'] ?? '%',
+                'precipitation' => $units['precipitation'] ?? 'mm',
+                'snowfall' => $units['snowfall'] ?? 'cm',
+            ],
             'days' => $days,
         ];
+    }
+
+    /**
+     * Normalize a JSON number to a float, keeping missing values as null.
+     */
+    protected function toFloat(int|float|null $value): ?float
+    {
+        return $value === null ? null : (float) $value;
     }
 }

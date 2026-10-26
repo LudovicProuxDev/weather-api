@@ -1,23 +1,39 @@
 export type WeatherLocation = {
-    name: string;
+    name: string | null;
     latitude: number;
     longitude: number;
 };
 
-export type HourlyTemperature = {
+export type ForecastHour = {
     time: string;
     temperature: number;
+    apparentTemperature: number | null;
+    humidity: number | null;
+    dewPoint: number | null;
+    precipitation: number | null;
+    rain: number | null;
+    snowfall: number | null;
 };
 
 export type ForecastDay = {
     date: string;
     min: number;
     max: number;
-    hours: HourlyTemperature[];
+    precipitation: number;
+    rain: number;
+    snowfall: number;
+    hours: ForecastHour[];
+};
+
+export type ForecastUnits = {
+    temperature: string;
+    humidity: string;
+    precipitation: string;
+    snowfall: string;
 };
 
 export type HourlyForecast = {
     timezone: string;
-    unit: string;
+    units: ForecastUnits;
     days: ForecastDay[];
 };
