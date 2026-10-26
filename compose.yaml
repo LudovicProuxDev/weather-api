@@ -11,6 +11,8 @@ x-environment: &environment
     DB_USERNAME: ${DB_USERNAME:-weather_api}
     DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env}
     SESSION_DRIVER: database
+    # Set to true once the app is served over HTTPS, otherwise login breaks on plain HTTP.
+    SESSION_SECURE_COOKIE: ${SESSION_SECURE_COOKIE:-false}
     CACHE_STORE: database
     QUEUE_CONNECTION: database
     MAIL_MAILER: log

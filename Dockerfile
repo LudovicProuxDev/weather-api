@@ -48,7 +48,9 @@ ENV APP_ENV=production \
     APP_DEBUG=false \
     LOG_CHANNEL=stderr \
     DB_CONNECTION=pgsql \
-    SERVER_NAME=:8080
+    SESSION_ENCRYPT=true \
+    SERVER_NAME=:8080 \
+    CADDY_SERVER_EXTRA_DIRECTIVES="header -Server"
 
 RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
     && { \
