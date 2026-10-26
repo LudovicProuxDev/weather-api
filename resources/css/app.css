@@ -68,33 +68,33 @@
     --card-foreground: oklch(0.145 0 0);
     --popover: oklch(1 0 0);
     --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
+    --primary: oklch(0.588 0.158 241.966);
     --primary-foreground: oklch(0.985 0 0);
     --secondary: oklch(0.97 0 0);
     --secondary-foreground: oklch(0.205 0 0);
     --muted: oklch(0.97 0 0);
     --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
+    --accent: oklch(0.951 0.026 236.824);
+    --accent-foreground: oklch(0.391 0.09 240.876);
     --destructive: oklch(0.577 0.245 27.325);
     --destructive-foreground: oklch(0.577 0.245 27.325);
     --border: oklch(0.922 0 0);
     --input: oklch(0.922 0 0);
-    --ring: oklch(0.87 0 0);
+    --ring: oklch(0.746 0.16 232.661);
     --chart-1: oklch(0.646 0.222 41.116);
     --chart-2: oklch(0.6 0.118 184.704);
     --chart-3: oklch(0.398 0.07 227.392);
     --chart-4: oklch(0.828 0.189 84.429);
     --chart-5: oklch(0.769 0.188 70.08);
     --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
+    --sidebar: oklch(0.977 0.013 236.62);
     --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
+    --sidebar-primary: oklch(0.588 0.158 241.966);
     --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.87 0 0);
+    --sidebar-accent: oklch(0.951 0.026 236.824);
+    --sidebar-accent-foreground: oklch(0.391 0.09 240.876);
+    --sidebar-border: oklch(0.901 0.058 230.902);
+    --sidebar-ring: oklch(0.746 0.16 232.661);
 }
 
 .dark {
@@ -104,19 +104,19 @@
     --card-foreground: oklch(0.985 0 0);
     --popover: oklch(0.145 0 0);
     --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.985 0 0);
-    --primary-foreground: oklch(0.205 0 0);
+    --primary: oklch(0.746 0.16 232.661);
+    --primary-foreground: oklch(0.205 0.03 240);
     --secondary: oklch(0.269 0 0);
     --secondary-foreground: oklch(0.985 0 0);
     --muted: oklch(0.269 0 0);
     --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
+    --accent: oklch(0.293 0.066 243.157);
+    --accent-foreground: oklch(0.951 0.026 236.824);
     --destructive: oklch(0.396 0.141 25.723);
     --destructive-foreground: oklch(0.637 0.237 25.331);
     --border: oklch(0.269 0 0);
     --input: oklch(0.269 0 0);
-    --ring: oklch(0.439 0 0);
+    --ring: oklch(0.685 0.169 237.323);
     --chart-1: oklch(0.488 0.243 264.376);
     --chart-2: oklch(0.696 0.17 162.48);
     --chart-3: oklch(0.769 0.188 70.08);
@@ -124,10 +124,10 @@
     --chart-5: oklch(0.645 0.246 16.439);
     --sidebar: oklch(0.205 0 0);
     --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.985 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-primary: oklch(0.746 0.16 232.661);
+    --sidebar-primary-foreground: oklch(0.205 0.03 240);
+    --sidebar-accent: oklch(0.293 0.066 243.157);
+    --sidebar-accent-foreground: oklch(0.951 0.026 236.824);
     --sidebar-border: oklch(0.269 0 0);
     --sidebar-ring: oklch(0.439 0 0);
 }
@@ -139,5 +139,101 @@
 
     body {
         @apply bg-background text-foreground;
+    }
+}
+
+/* ---------------------------------------------------------------------------
+ * Weather theme: a few light touches on top of the design tokens.
+ * ------------------------------------------------------------------------- */
+@layer components {
+    /* Soft sky gradient used by the welcome and authentication pages. */
+    .sky-backdrop {
+        background:
+            radial-gradient(
+                circle at 85% 10%,
+                oklch(0.924 0.12 95.746 / 0.55),
+                transparent 40%
+            ),
+            linear-gradient(
+                180deg,
+                oklch(0.951 0.026 236.824),
+                var(--background) 70%
+            );
+    }
+
+    .dark .sky-backdrop {
+        background:
+            radial-gradient(
+                circle at 85% 10%,
+                oklch(0.555 0.163 48.998 / 0.25),
+                transparent 40%
+            ),
+            linear-gradient(
+                180deg,
+                oklch(0.293 0.066 243.157),
+                var(--background) 70%
+            );
+    }
+
+    /* Sun-coloured badge behind the logo. */
+    .sun-badge {
+        background: linear-gradient(
+            135deg,
+            oklch(0.828 0.189 84.429),
+            oklch(0.705 0.213 47.604)
+        );
+        box-shadow: 0 2px 8px oklch(0.705 0.213 47.604 / 0.35);
+    }
+
+    /* Highlighted banner for the selected city. */
+    .weather-hero {
+        background: linear-gradient(
+            120deg,
+            oklch(0.951 0.026 236.824),
+            oklch(0.987 0.022 95.277)
+        );
+    }
+
+    .dark .weather-hero {
+        background: linear-gradient(
+            120deg,
+            oklch(0.293 0.066 243.157),
+            oklch(0.279 0.077 45.635 / 0.6)
+        );
+    }
+
+    /* Cards lift slightly on hover. */
+    .weather-card {
+        transition:
+            transform 150ms ease,
+            box-shadow 150ms ease;
+    }
+
+    .weather-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px oklch(0.588 0.158 241.966 / 0.12);
+    }
+
+    /* The sun turns slowly. */
+    .sun-spin {
+        animation: sun-spin 40s linear infinite;
+    }
+}
+
+@keyframes sun-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sun-spin {
+        animation: none;
+    }
+
+    .weather-card,
+    .weather-card:hover {
+        transform: none;
+        transition: none;
     }
 }
