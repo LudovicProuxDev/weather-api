@@ -8,7 +8,7 @@ Route::inertia('/', 'welcome')->name('home');
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
     Route::get('weather', WeatherForecastController::class)
-        ->middleware('throttle:30,1')
+        ->middleware('throttle:60,1')
         ->name('weather');
 });
 

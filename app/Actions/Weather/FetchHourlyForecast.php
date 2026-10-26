@@ -2,11 +2,10 @@
 
 namespace App\Actions\Weather;
 
+use App\Concerns\CallsOpenMeteo;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
-use Throwable;
 
 /**
  * @phpstan-type OpenMeteoPayload array{
@@ -50,6 +49,8 @@ use Throwable;
  */
 class FetchHourlyForecast
 {
+    use CallsOpenMeteo;
+
     /**
      * The hourly variables requested from Open-Meteo.
      *
@@ -104,12 +105,7 @@ class FetchHourlyForecast
      */
     protected function request(array $config, float $latitude, float $longitude): array
     {
-        return Http::baseUrl($config['base_url'])
-            ->connectTimeout(3)
-            ->timeout(5)
-            ->retry([200, 500], 0, fn (Throwable $exception): bool => $exception instanceof ConnectionException
-                || ($exception instanceof RequestException
-                    && ($exception->response->serverError() || $exception->response->status() === 429)))
+        return $this->openMeteo($config['base_url'])
             ->get('forecast', [
                 'latitude' => $latitude,
                 'longitude' => $longitude,

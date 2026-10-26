@@ -1,7 +1,16 @@
-export type WeatherLocation = {
-    name: string | null;
+export type City = {
+    id: number;
+    name: string;
+    region: string | null;
+    department: string | null;
+    country: string | null;
     latitude: number;
     longitude: number;
+};
+
+export type WeatherLocation = Omit<City, 'id' | 'name'> & {
+    id: number | null;
+    name: string | null;
 };
 
 export type ForecastHour = {

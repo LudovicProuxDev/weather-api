@@ -1,14 +1,15 @@
-import { Form, Head } from '@inertiajs/react';
-import { ChevronDown } from 'lucide-react';
+import { Head, Link, router } from '@inertiajs/react';
+import { ChevronDown, MapPin, Search } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import AlertError from '@/components/alert-error';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { weather } from '@/routes';
 import type {
+    City,
     ForecastDay,
     ForecastUnits,
     HourlyForecast,
@@ -33,53 +34,119 @@ function formatValue(value: number | null, unit: string): string {
     return value === null ? '—' : `${numberFormatter.format(value)} ${unit}`;
 }
 
-function LocationForm({ location }: { location: WeatherLocation }) {
+function describeLocation(location: Omit<WeatherLocation, 'id'>): string {
+    return [location.department, location.region, location.country]
+        .filter(Boolean)
+        .join(', ');
+}
+
+function currentLocationQuery(
+    location: WeatherLocation | null,
+): Record<string, number> {
+    if (location?.id) {
+        return { city: location.id };
+    }
+
+    if (location) {
+        return { latitude: location.latitude, longitude: location.longitude };
+    }
+
+    return {};
+}
+
+function CitySearch({
+    search,
+    cities,
+    location,
+    error,
+}: {
+    search: string | null;
+    cities: City[] | null;
+    location: WeatherLocation | null;
+    error?: string;
+}) {
+    const [query, setQuery] = useState(search ?? '');
+
+    useEffect(() => {
+        const term = query.trim();
+        const searchable = term.length >= 2 ? term : '';
+
+        if (searchable === (search ?? '')) {
+            return;
+        }
+
+        const timeout = setTimeout(() => {
+            router.get(
+                weather.url(),
+                {
+                    ...currentLocationQuery(location),
+                    ...(searchable ? { search: searchable } : {}),
+                },
+                {
+                    only: ['search', 'cities'],
+                    preserveState: true,
+                    preserveScroll: true,
+                    replace: true,
+                },
+            );
+        }, 300);
+
+        return () => clearTimeout(timeout);
+    }, [query, search, location]);
+
     return (
-        <Form
-            {...weather.form()}
-            options={{ preserveScroll: true }}
-            className="flex flex-wrap items-end gap-4"
-        >
-            {({ processing, errors }) => (
-                <>
-                    <div className="grid gap-2">
-                        <Label htmlFor="latitude">Latitude</Label>
-                        <Input
-                            id="latitude"
-                            name="latitude"
-                            type="number"
-                            step="any"
-                            min={-90}
-                            max={90}
-                            required
-                            defaultValue={location.latitude}
-                            className="w-40"
-                        />
-                        <InputError message={errors.latitude} />
-                    </div>
+        <div className="grid max-w-xl gap-2">
+            <Label htmlFor="city-search">Rechercher une ville</Label>
+            <div className="relative">
+                <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                    id="city-search"
+                    type="search"
+                    autoComplete="off"
+                    placeholder="Marseille, Lyon, Brest…"
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    maxLength={100}
+                    className="pl-9"
+                />
+            </div>
+            <InputError message={error} />
 
-                    <div className="grid gap-2">
-                        <Label htmlFor="longitude">Longitude</Label>
-                        <Input
-                            id="longitude"
-                            name="longitude"
-                            type="number"
-                            step="any"
-                            min={-180}
-                            max={180}
-                            required
-                            defaultValue={location.longitude}
-                            className="w-40"
-                        />
-                        <InputError message={errors.longitude} />
-                    </div>
-
-                    <Button type="submit" disabled={processing}>
-                        Afficher les prévisions
-                    </Button>
-                </>
+            {search !== null && cities === null && (
+                <p className="text-sm text-muted-foreground">
+                    La recherche de villes est indisponible pour le moment.
+                </p>
             )}
-        </Form>
+
+            {search !== null && cities?.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                    Aucune ville trouvée pour « {search} ».
+                </p>
+            )}
+
+            {cities !== null && cities.length > 0 && (
+                <ul className="divide-y overflow-hidden rounded-md border">
+                    {cities.map((city) => (
+                        <li key={city.id}>
+                            <Link
+                                href={weather({ query: { city: city.id } })}
+                                className="flex items-start gap-3 px-3 py-2 hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
+                            >
+                                <MapPin className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                                <span className="grid">
+                                    <span className="font-medium">
+                                        {city.name}
+                                    </span>
+                                    <span className="text-sm text-muted-foreground">
+                                        {describeLocation(city)}
+                                    </span>
+                                </span>
+                            </Link>
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </div>
     );
 }
 
@@ -203,24 +270,44 @@ function ForecastDayCard({
 export default function Weather({
     location,
     forecast,
+    search,
+    cities,
+    errors,
 }: {
-    location: WeatherLocation;
+    location: WeatherLocation | null;
     forecast: HourlyForecast | null;
+    search: string | null;
+    cities: City[] | null;
+    errors: Partial<Record<'search' | 'city', string>>;
 }) {
     const place =
-        location.name ??
-        `${numberFormatter.format(location.latitude)}, ${numberFormatter.format(location.longitude)}`;
+        location === null
+            ? null
+            : (location.name ??
+              `${numberFormatter.format(location.latitude)}, ${numberFormatter.format(location.longitude)}`);
 
     return (
         <>
-            <Head title="Météo" />
+            <Head title={place ? `Météo à ${place}` : 'Météo'} />
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
-                <Heading
-                    title={`Météo à ${place}`}
-                    description="Prévisions heure par heure — modèle Météo-France"
+                <CitySearch
+                    search={search}
+                    cities={cities}
+                    location={location}
+                    error={errors.search ?? errors.city}
                 />
 
-                <LocationForm location={location} />
+                {place !== null && location !== null && (
+                    <Heading
+                        title={`Météo à ${place}`}
+                        description={[
+                            describeLocation(location),
+                            'Prévisions heure par heure — modèle Météo-France',
+                        ]
+                            .filter(Boolean)
+                            .join(' · ')}
+                    />
+                )}
 
                 {forecast === null ? (
                     <AlertError
