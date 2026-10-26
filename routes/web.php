@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SavedLocationController;
 use App\Http\Controllers\WeatherForecastController;
 use Illuminate\Support\Facades\Route;
@@ -7,7 +8,9 @@ use Illuminate\Support\Facades\Route;
 Route::inertia('/', 'welcome')->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'dashboard')->name('dashboard');
+    Route::get('dashboard', DashboardController::class)
+        ->middleware('throttle:60,1')
+        ->name('dashboard');
     Route::get('weather', WeatherForecastController::class)
         ->middleware('throttle:60,1')
         ->name('weather');

@@ -60,7 +60,7 @@ class SavedLocationTest extends TestCase
 
         $response = $this->actingAs($user)->post(route('saved-locations.store'));
 
-        $response->assertSessionHasErrors(['city_id' => 'The city id field is required.']);
+        $response->assertSessionHasErrors(['city_id' => 'Le champ ville est obligatoire.']);
         $this->assertDatabaseCount('saved_locations', 0);
     }
 

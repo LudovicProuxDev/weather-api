@@ -55,3 +55,12 @@ export type SavedLocation = {
     department: string | null;
     country: string | null;
 };
+
+export type TodayForecast = {
+    current: number | null;
+    min: number;
+    max: number;
+    precipitation: number;
+    snowfall: number;
+    units: ForecastUnits;
+};
