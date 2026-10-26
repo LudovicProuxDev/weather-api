@@ -1,4 +1,4 @@
-name: test-laravel-security
+name: weather-api
 
 x-environment: &environment
   APP_NAME: ${APP_NAME:-Laravel}
@@ -10,7 +10,7 @@ x-environment: &environment
   MAIL_MAILER: log
 
 x-app: &app
-  image: test-laravel-security:latest
+  image: weather-api:latest
   restart: unless-stopped
   environment: *environment
   volumes:
