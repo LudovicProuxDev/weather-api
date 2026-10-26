@@ -35,4 +35,16 @@ return [
         ],
     ],
 
+    'open_meteo' => [
+        'base_url' => env('OPEN_METEO_BASE_URL', 'https://api.open-meteo.com/v1'),
+        'model' => env('OPEN_METEO_MODEL', 'meteofrance_seamless'),
+        'forecast_days' => (int) env('OPEN_METEO_FORECAST_DAYS', 4),
+        'cache_ttl' => (int) env('OPEN_METEO_CACHE_TTL', 1800),
+        'default_location' => [
+            'name' => 'La Rochelle',
+            'latitude' => 46.1631,
+            'longitude' => -1.1522,
+        ],
+    ],
+
 ];
