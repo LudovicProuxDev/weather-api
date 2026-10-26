@@ -6,11 +6,7 @@ if [ -z "$APP_KEY" ]; then
     exit 1
 fi
 
-mkdir -p storage/database storage/framework/cache storage/framework/sessions storage/framework/views storage/logs
-
-if [ "$DB_CONNECTION" = "sqlite" ] && [ ! -f "$DB_DATABASE" ]; then
-    touch "$DB_DATABASE"
-fi
+mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs
 
 if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
     php artisan migrate --force --no-interaction
